@@ -13,8 +13,8 @@ find_package(ament_cmake REQUIRED)
 install(
   DIRECTORY
     launch 
-    # config
-    # uncomment the above line if we add a config folder
+    config
+    worlds
   DESTINATION share/${PROJECT_NAME}
 )
 

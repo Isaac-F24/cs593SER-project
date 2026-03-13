@@ -1,0 +1,189 @@
+<sdf version='1.7'>
+  <world name='default'>
+    <plugin
+      filename="gz-sim-physics-system"
+      name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin
+      filename="gz-sim-user-commands-system"
+      name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin
+      filename="gz-sim-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+    <plugin
+      filename="gz-sim-sensors-system"
+      name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+
+    <gui fullscreen="0">
+      <plugin filename="GzScene3D" name="3D View">
+        <ignition-gui>
+          <title>3D View</title>
+          <property type="bool" key="showTitleBar">false</property>
+          <property type="string" key="state">docked</property>
+        </ignition-gui>
+        <engine>ogre2</engine>
+        <scene>scene</scene>
+        <ambient_light>0.4 0.4 0.4</ambient_light>
+        <background_color>0.8 0.8 0.8</background_color>
+        <camera_pose>1.5 0 1.2 0 0.5 3.14</camera_pose>
+      </plugin>
+
+      <plugin filename="WorldControl" name="World control">
+        <ignition-gui>
+          <title>World control</title>
+          <property type="bool" key="showTitleBar">false</property>
+          <property type="bool" key="resizable">false</property>
+          <property type="double" key="height">72</property>
+          <property type="double" key="width">121</property>
+          <property type="double" key="z">1</property>
+          <property type="string" key="state">floating</property>
+          <anchors target="3D View">
+            <line own="left" target="left"/>
+            <line own="bottom" target="bottom"/>
+          </anchors>
+        </ignition-gui>
+        <play_pause>true</play_pause>
+        <step>true</step>
+        <start_paused>true</start_paused>
+      </plugin>
+
+      <plugin filename="WorldStats" name="World stats">
+        <ignition-gui>
+          <title>World stats</title>
+          <property type="bool" key="showTitleBar">false</property>
+          <property type="bool" key="resizable">false</property>
+          <property type="double" key="height">110</property>
+          <property type="double" key="width">290</property>
+          <property type="double" key="z">1</property>
+          <property type="string" key="state">floating</property>
+          <anchors target="3D View">
+            <line own="right" target="right"/>
+            <line own="bottom" target="bottom"/>
+          </anchors>
+        </ignition-gui>
+        <sim_time>true</sim_time>
+        <real_time>true</real_time>
+        <real_time_factor>true</real_time_factor>
+        <iterations>true</iterations>
+      </plugin>
+
+      <plugin filename="EntityTree" name="Entity tree">
+        <ignition-gui>
+          <property type="string" key="state">docked</property>
+        </ignition-gui>
+      </plugin>
+
+    <plugin filename="TransformControl" name="Transform control">
+        <ignition-gui>
+          <title>Transform control</title>
+          <property type="bool" key="showTitleBar">false</property>
+          <property type="double" key="height">50</property>
+          <property type="double" key="width">250</property>
+          <property type="double" key="z">1</property>
+          <property type="string" key="state">floating</property>
+          <anchors target="3D View">
+            <line own="top" target="top"/>
+            <line own="left" target="left"/>
+          </anchors>
+        </ignition-gui>
+      </plugin>
+
+    <plugin filename="ComponentInspector" name="Component inspector">
+        <ignition-gui>
+          <property type="string" key="state">docked</property>
+        </ignition-gui>
+      </plugin>
+    </gui>
+
+    <light name='sun' type='directional'>
+      <cast_shadows>0</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.4 0.4 0.4 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <attenuation>
+        <range>500</range>
+        <constant>0.8</constant>
+        <linear>0.02</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>0 0 -0.9</direction>
+    </light>
+
+
+    <physics type='ode'>
+      <max_step_size>0.01</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>100</real_time_update_rate>
+    </physics>
+
+    <gravity>0 0 -9.81</gravity>
+
+    <!-- Table -->
+    <model name="table">
+      <static>true</static>
+      <pose>0 0 0 0 0 0</pose>
+      <!-- Table top -->
+      <link name="table_top">
+        <pose>0 0 0 0 0 0</pose>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>3 3 0.05</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>3 3 0.05</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.4 0.4 0.4 1</ambient>
+            <diffuse>0.4 0.4 0.4 1</diffuse>
+            <specular>0.1 0.1 0.5 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+    
+
+    <!-- <model name='tag_36_11_00011'>
+      <pose>2.5 2.5 0.4 1.58 0 0</pose>
+      <static>1</static>
+      <link name='link'>
+        <visual name='tag_36_11_00011'>
+          <geometry>
+            <box>
+              <size>0.238125 0.238125 0.005</size>
+            </box>
+          </geometry>
+          <material>
+            <pbr>
+              <metal>
+                <albedo_map>model://apriltags/tag_36_11_00011/materials/textures/tag_36_11_00011.png</albedo_map>
+              </metal>
+            </pbr>
+            <ambient>1.0 1.0 1.0 1.0</ambient>
+            <diffuse>1.0 1.0 1.0 1.0</diffuse>
+            <specular>1.0 1.0 1.0 1.0</specular>
+            <emissive>0 0 0 1.0</emissive>
+          </material>
+        </visual>
+        <collision name='tag_36_11_00011_collision'>
+          <geometry>
+            <box>
+              <size>0.238125 0.238125 0.005</size>
+            </box>
+          </geometry>
+        </collision>
+      </link>
+    </model> -->
+
+  </world>
+</sdf>

@@ -1,4 +1,5 @@
-controller_manager:
+/**:
+ controller_manager:
   ros__parameters:
     update_rate: 1000  # Hz
 
