@@ -151,7 +151,11 @@ if __name__ == "__main__":
     success = leftArmController.go_to_pose([0.3,0.5,0.5],[0.5,0.5,0,0])
     if (not success):
         print("Failure!")
-#
+
+    success = rightArmController.go_to_pose([0.4,-0.5,0.6],[0.6,0.4,0,0])
+    if (not success):
+        print("Failure!")
+
     leftArmController.cleanup()
     rightArmController.cleanup()
 

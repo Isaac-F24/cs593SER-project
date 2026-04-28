@@ -289,11 +289,20 @@ def generate_launch_description():
             "xacro ", franka_semantic_xacro_file,
             " hand:=true",
             " ee_id:=franka_hand"
-            " arm_prefix:=", right_namespace,
+            " arm_prefix:=", right_namespace, "_",
         ]),
         value_type=str
     )
 
+    right_arm_controller_spawner_node = Node(
+        package="controller_manager",
+        executable="spawner",
+        namespace=right_namespace,
+        arguments=[
+            "right_fr3_arm_controller", 
+            "-c", "controller_manager" 
+        ],
+    )
 
     right_move_group_node = Node(
         package='moveit_ros_move_group',
@@ -337,6 +346,7 @@ def generate_launch_description():
         right_robot_state_publisher,
         right_spawn_node,
         right_move_group_node,
+        right_arm_controller_spawner_node,
         RegisterEventHandler(
             event_handler=OnProcessExit(
                 target_action=right_spawn_node,
