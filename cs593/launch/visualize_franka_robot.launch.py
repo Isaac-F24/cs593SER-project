@@ -71,10 +71,25 @@ def generate_robot_state_publisher(context: LaunchContext, namespace, start_coor
 
 
 def generate_launch_description():
+    load_gripper_name = 'load_gripper'
+    franka_hand_name = 'franka_hand'
 
     # Launch args/configurations
+    should_load_gripper = LaunchConfiguration(load_gripper_name)
+    franka_hand = LaunchConfiguration(franka_hand_name)
     left_namespace = LaunchConfiguration("left_namespace")
     right_namespace = LaunchConfiguration("right_namespace")
+
+    load_gripper_launch_argument = DeclareLaunchArgument(
+        load_gripper_name,
+        default_value='true',
+        description='true/false for activating the gripper'
+    )
+    franka_hand_launch_argument = DeclareLaunchArgument(
+        franka_hand_name,
+        default_value='franka_hand',
+        description='Default value: franka_hand'
+    )
 
     namespace_launch_argument = DeclareLaunchArgument(
         "left_namespace",
@@ -401,6 +416,9 @@ def generate_launch_description():
 
 
     return LaunchDescription([
+        load_gripper_launch_argument,
+        franka_hand_launch_argument,
+
         namespace_launch_argument,
         namespace2_launch_argument,
 

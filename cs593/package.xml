@@ -7,7 +7,6 @@
   <maintainer email="email@email.com">n/a</maintainer>
   <license>n/a</license>
 
-  <depend>rclpy</depend>
   <depend>ros_gz</depend>
   <depend>sdformat_urdf</depend>
   <depend>joint_state_publisher_gui</depend>
