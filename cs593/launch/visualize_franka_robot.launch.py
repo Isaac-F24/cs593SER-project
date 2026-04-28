@@ -173,17 +173,6 @@ def generate_launch_description():
         args=[left_namespace, (0, 0.5, 0)]
     )
 
-    left_joint_state_publisher = Node(
-        package='joint_state_publisher',
-        executable='joint_state_publisher',
-        name='joint_state_publisher',
-        namespace=left_namespace,
-        parameters=[
-            {'source_list': ['/joint_states'],
-             'rate': 30}
-        ]
-    )
-
     left_spawn_node = Node(
         package='ros_gz_sim',
         executable='create',
@@ -221,11 +210,20 @@ def generate_launch_description():
             "xacro ", franka_semantic_xacro_file,
             " hand:=true",
             " ee_id:=franka_hand"
-            " arm_prefix:=", left_namespace,
+            " arm_prefix:=", left_namespace, "_"
         ]),
         value_type=str
     )
 
+    left_arm_controller_spawner_node = Node(
+        package="controller_manager",
+        executable="spawner",
+        namespace=left_namespace,
+        arguments=[
+            "left_fr3_arm_controller", 
+            "-c", "controller_manager" 
+        ],
+    )
 
     left_move_group_node = Node(
         package='moveit_ros_move_group',
@@ -243,7 +241,8 @@ def generate_launch_description():
             trajectory_execution_config,
             moveit_controllers_config,
             planning_scene_monitor_parameters,
-            ompl_planning_pipeline_config
+            ompl_planning_pipeline_config,
+            {'use_sim_time': True}
         ],
     )
 
@@ -251,17 +250,6 @@ def generate_launch_description():
     right_robot_state_publisher = OpaqueFunction(
         function=generate_robot_state_publisher,
         args=[right_namespace, (0, -0.5, 0)]
-    )
-
-    right_joint_state_publisher = Node(
-        package='joint_state_publisher',
-        executable='joint_state_publisher',
-        name='joint_state_publisher',
-        namespace=right_namespace,
-        parameters=[
-            {'source_list': ['/joint_states'],
-             'rate': 30}
-        ]
     )
 
     right_spawn_node = Node(
@@ -323,7 +311,8 @@ def generate_launch_description():
             trajectory_execution_config,
             moveit_controllers_config,
             planning_scene_monitor_parameters,
-            ompl_planning_pipeline_config
+            ompl_planning_pipeline_config,
+            {'use_sim_time': True}
         ],
     )
 
@@ -335,9 +324,9 @@ def generate_launch_description():
         rviz_node,
 
         left_robot_state_publisher,
-        left_joint_state_publisher,
         left_spawn_node,
         left_move_group_node,
+        left_arm_controller_spawner_node,
         RegisterEventHandler(
             event_handler=OnProcessExit(
                 target_action=left_spawn_node,
@@ -346,7 +335,6 @@ def generate_launch_description():
         ),
 
         right_robot_state_publisher,
-        right_joint_state_publisher,
         right_spawn_node,
         right_move_group_node,
         RegisterEventHandler(
