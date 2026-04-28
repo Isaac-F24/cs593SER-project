@@ -84,8 +84,8 @@ RUN sudo chown -R $USERNAME:$USERNAME /ros2_ws \
     && rosdep install --from-paths src --ignore-src --rosdistro $ROS_DISTRO -y \
     && sudo apt-get clean \
     && sudo rm -rf /var/lib/apt/lists/* \
-    && rm -rf /home/$USERNAME/.ros \
-    && rm -rf src \
+    && sudo rm -rf /home/$USERNAME/.ros \
+    && sudo rm -rf src \
     && mkdir -p src
 
 COPY ./franka_entrypoint.sh /franka_entrypoint.sh

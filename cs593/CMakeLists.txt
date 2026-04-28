@@ -12,10 +12,16 @@ find_package(ament_cmake REQUIRED)
 # Install project launch files
 install(
   DIRECTORY
-    launch 
+    launch
     config
     worlds
   DESTINATION share/${PROJECT_NAME}
+)
+
+install(
+  PROGRAMS
+    scripts/grasp_node.py
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
