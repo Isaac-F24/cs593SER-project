@@ -209,7 +209,7 @@ def generate_launch_description():
     # left arm
     left_robot_state_publisher = OpaqueFunction(
         function=generate_robot_state_publisher,
-        args=[left_namespace, should_load_gripper, franka_hand, (0, 0.5, 0)]
+        args=[left_namespace, (0, 0.5, 0)]
     )
 
     left_spawn_node = Node(
@@ -308,7 +308,7 @@ def generate_launch_description():
     # right arm
     right_robot_state_publisher = OpaqueFunction(
         function=generate_robot_state_publisher,
-        args=[right_namespace, should_load_gripper, franka_hand, (0, -0.5, 0)]
+        args=[right_namespace, (0, -0.5, 0)]
     )
 
     right_joint_state_publisher = Node(
