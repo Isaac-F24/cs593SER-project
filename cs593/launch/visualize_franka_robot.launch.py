@@ -296,6 +296,17 @@ def generate_launch_description():
         args=[right_namespace, should_load_gripper, franka_hand, (0, -0.5, 0)]
     )
 
+    right_joint_state_publisher = Node(
+        package='joint_state_publisher',
+        executable='joint_state_publisher',
+        name='joint_state_publisher',
+        namespace=right_namespace,
+        parameters=[
+            {'source_list': ['/joint_states'],
+             'rate': 30}
+        ]
+    )
+
     right_spawn_node = Node(
         package='ros_gz_sim',
         executable='create',
