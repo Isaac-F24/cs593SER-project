@@ -16,15 +16,17 @@ ament_python_install_package(${PROJECT_NAME})
 # Install project launch files
 install(
   DIRECTORY
-    launch 
+    launch
     config
     worlds
   DESTINATION share/${PROJECT_NAME}
 )
 
+
 # install python nodes
 install(PROGRAMS
         scripts/moveit_controllers.py
+        scripts/grasp_node.py
         DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

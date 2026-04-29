@@ -10,3 +10,5 @@ build/
 install/
 log/
 libfranka
+docker-compose.yml
+Dockerfile

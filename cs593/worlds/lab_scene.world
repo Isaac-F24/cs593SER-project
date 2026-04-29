@@ -153,23 +153,30 @@
     </model>
 
     <model name="blue_box">
-      <pose>0.55 0.1 0.7 0 0 0</pose>
+      <pose>0.55 0.1 0.0525 0 0 0</pose>
+      <plugin filename="gz-sim-pose-publisher-system"
+              name="gz::sim::systems::PosePublisher">
+        <publish_link_pose>false</publish_link_pose>
+        <publish_model_pose>true</publish_model_pose>
+        <update_frequency>60</update_frequency>
+      </plugin>
       <link name="link">
         <inertial>
           <mass>0.1</mass>
           <inertia>
-            <ixx>0.00038</ixx>
+            <!-- cube 0.055^3, m=0.1: I = m/12 * 2*0.055^2 = 5.04e-5 -->
+            <ixx>0.00005042</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.00038</iyy>
+            <iyy>0.00005042</iyy>
             <iyz>0</iyz>
-            <izz>0.000032</izz>
+            <izz>0.00005042</izz>
           </inertia>
         </inertial>
         <collision name="collision">
           <geometry>
             <box>
-              <size>0.06 0.06 0.06</size>
+              <size>0.055 0.055 0.055</size>
             </box>
           </geometry>
           <surface>
@@ -184,7 +191,7 @@
         <visual name="visual">
           <geometry>
             <box>
-              <size>0.06 0.06 0.06</size>
+              <size>0.055 0.055 0.055</size>
             </box>
           </geometry>
           <material>
@@ -197,23 +204,30 @@
     </model>
 
     <model name="red_box">
-      <pose>0.6 0.3 0.7 0 0 0</pose>
+      <pose>0.6 0.3 0.0525 0 0 0</pose>
+      <plugin filename="gz-sim-pose-publisher-system"
+              name="gz::sim::systems::PosePublisher">
+        <publish_link_pose>false</publish_link_pose>
+        <publish_model_pose>true</publish_model_pose>
+        <update_frequency>60</update_frequency>
+      </plugin>
       <link name="link">
         <inertial>
           <mass>0.1</mass>
           <inertia>
-            <ixx>0.00038</ixx>
+            <!-- cube 0.055^3, m=0.1: I = m/12 * 2*0.055^2 = 5.04e-5 -->
+            <ixx>0.00005042</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.00038</iyy>
+            <iyy>0.00005042</iyy>
             <iyz>0</iyz>
-            <izz>0.000032</izz>
+            <izz>0.00005042</izz>
           </inertia>
         </inertial>
         <collision name="collision">
           <geometry>
             <box>
-              <size>0.06 0.06 0.06</size>
+              <size>0.055 0.055 0.055</size>
             </box>
           </geometry>
           <surface>
@@ -228,7 +242,7 @@
         <visual name="visual">
           <geometry>
             <box>
-              <size>0.06 0.06 0.06</size>
+              <size>0.055 0.055 0.055</size>
             </box>
           </geometry>
           <material>
@@ -241,23 +255,30 @@
     </model>
 
     <model name="green_box">
-      <pose>0.55 0.45 0.7 0 0 0</pose>
+      <pose>0.55 0.45 0.0525 0 0 0</pose>
+      <plugin filename="gz-sim-pose-publisher-system"
+              name="gz::sim::systems::PosePublisher">
+        <publish_link_pose>false</publish_link_pose>
+        <publish_model_pose>true</publish_model_pose>
+        <update_frequency>60</update_frequency>
+      </plugin>
       <link name="link">
         <inertial>
           <mass>0.1</mass>
           <inertia>
-            <ixx>0.00038</ixx>
+            <!-- cube 0.055^3, m=0.1: I = m/12 * 2*0.055^2 = 5.04e-5 -->
+            <ixx>0.00005042</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>0.00038</iyy>
+            <iyy>0.00005042</iyy>
             <iyz>0</iyz>
-            <izz>0.000032</izz>
+            <izz>0.00005042</izz>
           </inertia>
         </inertial>
         <collision name="collision">
           <geometry>
             <box>
-              <size>0.06 0.06 0.06</size>
+              <size>0.055 0.055 0.055</size>
             </box>
           </geometry>
           <surface>
@@ -272,7 +293,7 @@
         <visual name="visual">
           <geometry>
             <box>
-              <size>0.06 0.06 0.06</size>
+              <size>0.055 0.055 0.055</size>
             </box>
           </geometry>
           <material>

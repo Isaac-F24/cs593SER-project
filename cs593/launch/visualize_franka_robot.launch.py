@@ -62,7 +62,8 @@ def generate_robot_state_publisher(context: LaunchContext, namespace, start_coor
         namespace=namespace,
         output='both',
         parameters=[
-            {'robot_description': robot_description_config.toxml()},
+            {'robot_description': robot_description_config.toxml(),
+             'use_sim_time': True},
         ]
     )
 
@@ -157,6 +158,28 @@ def generate_launch_description():
         launch_arguments={'gz_args': f'{world_file} -r', }.items(),
     )
 
+    # Gazebo <-> ROS bridge: sim clock + per-model world poses (consumed by
+    # grasp_node on /gz_world_poses).
+    gz_bridge_node = Node(
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        name='gz_ros_bridge',
+        arguments=[
+            '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
+            '/world/default/pose/info@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
+        ],
+        remappings=[('/world/default/pose/info', '/gz_world_poses')],
+        output='screen',
+    )
+
+    # Controller config files
+    grasp_cfg_dir = os.path.join(
+        get_package_share_directory('cs593'), 'config', 'grasp')
+    left_arm_ctrl_yaml     = os.path.join(grasp_cfg_dir, 'left_arm_controller.yaml')
+    left_gripper_ctrl_yaml = os.path.join(grasp_cfg_dir, 'left_gripper_controller.yaml')
+    right_arm_ctrl_yaml     = os.path.join(grasp_cfg_dir, 'right_arm_controller.yaml')
+    right_gripper_ctrl_yaml = os.path.join(grasp_cfg_dir, 'right_gripper_controller.yaml')
+
     # RVIZ
     rviz_file = os.path.join(get_package_share_directory('cs593'), 'config', 'lab_scene.rviz')
     rviz_node = Node(
@@ -165,6 +188,7 @@ def generate_launch_description():
         name='rviz2',
         namespace="",
         arguments=['--display-config', rviz_file, '-f', 'world'],
+        parameters=[{'use_sim_time': True}],
     )
 
     # left arm
@@ -186,7 +210,7 @@ def generate_launch_description():
     left_joint_state_broadcaster_spawner = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["joint_state_broadcaster", 
+        arguments=["joint_state_broadcaster",
                    "--controller-manager", [left_namespace, "/controller_manager"],
         ],
         output="screen",
@@ -246,6 +270,16 @@ def generate_launch_description():
         ],
     )
 
+    left_gripper_controller_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["left_fr3_gripper_controller",
+                   "--controller-manager", [left_namespace, "/controller_manager"],
+                   "--param-file", left_gripper_ctrl_yaml,
+        ],
+        output="screen",
+    )
+
     # right arm
     right_robot_state_publisher = OpaqueFunction(
         function=generate_robot_state_publisher,
@@ -265,7 +299,7 @@ def generate_launch_description():
     right_joint_state_broadcaster_spawner = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["joint_state_broadcaster", 
+        arguments=["joint_state_broadcaster",
                    "--controller-manager", [right_namespace, "/controller_manager"],
         ],
         output="screen",
@@ -325,11 +359,22 @@ def generate_launch_description():
         ],
     )
 
+    right_gripper_controller_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["right_fr3_gripper_controller",
+                   "--controller-manager", [right_namespace, "/controller_manager"],
+                   "--param-file", right_gripper_ctrl_yaml,
+        ],
+        output="screen",
+    )
+
     return LaunchDescription([
         namespace_launch_argument,
         namespace2_launch_argument,
 
         gazebo_launch,
+        gz_bridge_node,
         rviz_node,
 
         left_robot_state_publisher,
@@ -342,6 +387,12 @@ def generate_launch_description():
                 on_exit=[left_joint_state_broadcaster_spawner],
             )
         ),
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=left_joint_state_broadcaster_spawner,
+                on_exit=[left_gripper_controller_spawner],
+            )
+        ),
 
         right_robot_state_publisher,
         right_spawn_node,
@@ -351,6 +402,12 @@ def generate_launch_description():
             event_handler=OnProcessExit(
                 target_action=right_spawn_node,
                 on_exit=[right_joint_state_broadcaster_spawner],
+            )
+        ),
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=right_joint_state_broadcaster_spawner,
+                on_exit=[right_gripper_controller_spawner],
             )
         ),
 
