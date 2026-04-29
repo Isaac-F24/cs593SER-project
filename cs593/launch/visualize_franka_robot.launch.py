@@ -71,25 +71,10 @@ def generate_robot_state_publisher(context: LaunchContext, namespace, start_coor
 
 
 def generate_launch_description():
-    load_gripper_name = 'load_gripper'
-    franka_hand_name = 'franka_hand'
 
     # Launch args/configurations
-    should_load_gripper = LaunchConfiguration(load_gripper_name)
-    franka_hand = LaunchConfiguration(franka_hand_name)
     left_namespace = LaunchConfiguration("left_namespace")
     right_namespace = LaunchConfiguration("right_namespace")
-
-    load_gripper_launch_argument = DeclareLaunchArgument(
-        load_gripper_name,
-        default_value='true',
-        description='true/false for activating the gripper'
-    )
-    franka_hand_launch_argument = DeclareLaunchArgument(
-        franka_hand_name,
-        default_value='franka_hand',
-        description='Default value: franka_hand'
-    )
 
     namespace_launch_argument = DeclareLaunchArgument(
         "left_namespace",
@@ -175,7 +160,7 @@ def generate_launch_description():
 
     # Gazebo <-> ROS bridge: sim clock + per-model world poses (consumed by
     # grasp_node on /gz_world_poses).
-    gz_bridge = Node(
+    gz_bridge_node = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
         name='gz_ros_bridge',
@@ -190,9 +175,7 @@ def generate_launch_description():
     # Controller config files
     grasp_cfg_dir = os.path.join(
         get_package_share_directory('cs593'), 'config', 'grasp')
-    left_arm_ctrl_yaml     = os.path.join(grasp_cfg_dir, 'left_arm_controller.yaml')
     left_gripper_ctrl_yaml = os.path.join(grasp_cfg_dir, 'left_gripper_controller.yaml')
-    right_arm_ctrl_yaml     = os.path.join(grasp_cfg_dir, 'right_arm_controller.yaml')
     right_gripper_ctrl_yaml = os.path.join(grasp_cfg_dir, 'right_gripper_controller.yaml')
 
     # RVIZ
@@ -285,16 +268,6 @@ def generate_launch_description():
         ],
     )
 
-    left_arm_controller_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["left_fr3_arm_controller",
-                   "--controller-manager", [left_namespace, "/controller_manager"],
-                   "--param-file", left_arm_ctrl_yaml,
-        ],
-        output="screen",
-    )
-
     left_gripper_controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
@@ -309,17 +282,6 @@ def generate_launch_description():
     right_robot_state_publisher = OpaqueFunction(
         function=generate_robot_state_publisher,
         args=[right_namespace, (0, -0.5, 0)]
-    )
-
-    right_joint_state_publisher = Node(
-        package='joint_state_publisher',
-        executable='joint_state_publisher',
-        name='joint_state_publisher',
-        namespace=right_namespace,
-        parameters=[
-            {'source_list': ['/joint_states'],
-             'rate': 30}
-        ]
     )
 
     right_spawn_node = Node(
@@ -394,15 +356,6 @@ def generate_launch_description():
             {'use_sim_time': True}
         ],
     )
-    right_arm_controller_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["right_fr3_arm_controller",
-                   "--controller-manager", [right_namespace, "/controller_manager"],
-                   "--param-file", right_arm_ctrl_yaml,
-        ],
-        output="screen",
-    )
 
     right_gripper_controller_spawner = Node(
         package="controller_manager",
@@ -414,16 +367,13 @@ def generate_launch_description():
         output="screen",
     )
 
-
     return LaunchDescription([
-        load_gripper_launch_argument,
-        franka_hand_launch_argument,
 
         namespace_launch_argument,
         namespace2_launch_argument,
 
         gazebo_launch,
-        gz_bridge,
+        gz_bridge_node,
         rviz_node,
 
         left_robot_state_publisher,
@@ -439,7 +389,7 @@ def generate_launch_description():
         RegisterEventHandler(
             event_handler=OnProcessExit(
                 target_action=left_joint_state_broadcaster_spawner,
-                on_exit=[left_arm_controller_spawner, left_gripper_controller_spawner],
+                on_exit=[left_gripper_controller_spawner],
             )
         ),
 
@@ -456,7 +406,7 @@ def generate_launch_description():
         RegisterEventHandler(
             event_handler=OnProcessExit(
                 target_action=right_joint_state_broadcaster_spawner,
-                on_exit=[right_arm_controller_spawner, right_gripper_controller_spawner],
+                on_exit=[right_gripper_controller_spawner],
             )
         ),
 

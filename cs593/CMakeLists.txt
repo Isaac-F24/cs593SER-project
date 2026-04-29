@@ -22,15 +22,10 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
-install(
-  PROGRAMS
-    scripts/grasp_node.py
-  DESTINATION lib/${PROJECT_NAME}
-)
-
 # install python nodes
 install(PROGRAMS
         scripts/moveit_controllers.py
+        scripts/grasp_node.py
         DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

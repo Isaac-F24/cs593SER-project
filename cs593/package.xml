@@ -8,6 +8,7 @@
   <license>n/a</license>
 
   <depend>ros_gz</depend>
+  <depend>rclpy</depend>
   <depend>sdformat_urdf</depend>
   <depend>joint_state_publisher_gui</depend>
   <depend>franka_description</depend>
@@ -17,7 +18,6 @@
   <buildtool_depend>ament_cmake_python</buildtool_depend>
 
   <exec_depend>ros2controlcli</exec_depend>
-  <exec_depend>rclpy</exec_depend>
   <exec_depend>tf2_msgs</exec_depend>
   <exec_depend>control_msgs</exec_depend>
   <exec_depend>trajectory_msgs</exec_depend>

@@ -10,6 +10,5 @@ build/
 install/
 log/
 libfranka
-franka_description
 docker-compose.yml
 Dockerfile
