@@ -483,9 +483,9 @@ class GraspNode(Node):
         self.get_logger().info(f'Step 4/{n_steps}  Moving to grasp')
         
         if self.arm == "left":
-            self.left_arm_controller.go_to_pose(grasp_pos, rotation_matrix_to_quaternion(self.grasp_R))
+            self.left_arm_controller.go_to_pose(grasp_pos, rotation_matrix_to_quaternion(self.grasp_R), cartesian=True)
         else:
-            self.right_arm_controller.go_to_pose(grasp_pos, rotation_matrix_to_quaternion(self.grasp_R))
+            self.right_arm_controller.go_to_pose(grasp_pos, rotation_matrix_to_quaternion(self.grasp_R), cartesian=True)
 
         time.sleep(0.5)  # let oscillations settle
 
@@ -511,9 +511,9 @@ class GraspNode(Node):
         self.get_logger().info(f'Step {lift_step}/{n_steps}  Lifting')
 
         if self.arm == "left":
-            self.left_arm_controller.go_to_pose(lift_pos, rotation_matrix_to_quaternion(self.grasp_R))
+            self.left_arm_controller.go_to_pose(lift_pos, rotation_matrix_to_quaternion(self.grasp_R), cartesian=True)
         else:
-            self.right_arm_controller.go_to_pose(lift_pos, rotation_matrix_to_quaternion(self.grasp_R))
+            self.right_arm_controller.go_to_pose(lift_pos, rotation_matrix_to_quaternion(self.grasp_R), cartesian=True)
 
 
         # 7. (top-grasp only) Carry the block to the handoff pose so a side-

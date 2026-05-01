@@ -34,44 +34,50 @@ class LeftArmMoveitController():
 
         executor.add_node(self.node)
 
-    def go_to_pose(self, pose, orientation):
+    def go_to_pose(self, pose, orientation, cartesian: bool = False):
         """
         Move to pose and wait for execution to finish
 
         args:
         position- target position, list of [x,y,z] (in world frame)
         orientation- target orientation, quaternion list of [x,y,z,w]
+        cartesian- if True, plan a straight-line Cartesian path
 
         Returns
         success- boolean of whether move was successful or not
         """
         self.moveit2.move_to_pose(
             position=pose,
-            quat_xyzw=orientation, 
-            frame_id="world"
+            quat_xyzw=orientation,
+            frame_id="world",
+            cartesian=cartesian,
+            cartesian_fraction_threshold=0.95,
         )
 
         success = self.moveit2.wait_until_executed()
 
         return success
-    
-    def go_to_pose_async(self, pose, orientation):
+
+    def go_to_pose_async(self, pose, orientation, cartesian: bool = False):
         """
         Start a move to pose, don't wait for results
 
         args:
         position- target position, list of [x,y,z] (in world frame)
         orientation- target orientation, quaternion list of [x,y,z,w]
+        cartesian- if True, plan a straight-line Cartesian path
         """
         self.moveit2.move_to_pose(
             position=pose,
-            quat_xyzw=orientation, 
-            frame_id="world"
+            quat_xyzw=orientation,
+            frame_id="world",
+            cartesian=cartesian,
+            cartesian_fraction_threshold=0.95,
         )
 
     def cleanup(self):
         self.node.destroy_node()
-        
+
 class RightArmMoveitController():
     def __init__(self, executor: SingleThreadedExecutor):
         self.node = Node("right_arm_moveit_node", namespace="right")
@@ -88,39 +94,43 @@ class RightArmMoveitController():
 
         executor.add_node(self.node)
 
-    def go_to_pose(self, pose, orientation):
+    def go_to_pose(self, pose, orientation, cartesian: bool = False):
         """
         Move to pose and wait for execution to finish
 
         args:
         position- target position, list of [x,y,z] (in world frame)
         orientation- target orientation, quaternion list of [x,y,z,w]
+        cartesian- if True, plan a straight-line Cartesian path
 
         Returns
         success- boolean of whether move was successful or not
         """
         self.moveit2.move_to_pose(
             position=pose,
-            quat_xyzw=orientation, 
-            frame_id="world"
+            quat_xyzw=orientation,
+            frame_id="world",
+            cartesian=cartesian
         )
 
         success = self.moveit2.wait_until_executed()
 
         return success
-    
-    def go_to_pose_async(self, pose, orientation):
+
+    def go_to_pose_async(self, pose, orientation, cartesian: bool = False):
         """
         Start a move to pose, don't wait for results
 
         args:
         position- target position, list of [x,y,z] (in world frame)
         orientation- target orientation, quaternion list of [x,y,z,w]
+        cartesian- if True, plan a straight-line Cartesian path
         """
         self.moveit2.move_to_pose(
             position=pose,
-            quat_xyzw=orientation, 
-            frame_id="world"
+            quat_xyzw=orientation,
+            frame_id="world",
+            cartesian=cartesian
         )
 
     def cleanup(self):
