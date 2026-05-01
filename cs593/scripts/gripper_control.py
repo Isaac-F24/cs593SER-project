@@ -1,62 +1,17 @@
 #!/usr/bin/env python3
-"""
-Top-down grasp node for FR3 dual-arm setup.
-Reads block poses from /gz_world_poses, solves IK, and executes grasp via
-joint_trajectory_controller.
-"""
+
 import threading
 import time
-import numpy as np
-from scipy.optimize import minimize
 
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionClient
 from control_msgs.action import FollowJointTrajectory
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
-from tf2_msgs.msg import TFMessage
 from sensor_msgs.msg import JointState
-from visualization_msgs.msg import Marker, MarkerArray
-from geometry_msgs.msg import Point
-from std_msgs.msg import ColorRGBA
 import builtin_interfaces.msg
 from rclpy.executors import SingleThreadedExecutor
 
-
-
-# Top-down: TCP z-axis points straight into world -z (gripper faces down)
-R_TOP_DOWN = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]], dtype=float)
-
-# Side grasp from -y side: TCP +z = world +y (gripper aims at block from -y),
-# TCP +y = world +x (fingers close along world x → grip the block's x-sides),
-# TCP +x = world +z (right-hand frame). Used by the right arm to pinch the
-# block at its centre while another arm grasps from above.
-R_SIDE_FROM_NEG_Y = np.array([[0, 1, 0],
-                              [0, 0, 1],
-                              [1, 0, 0]], dtype=float)
-
-# Block half-extent (matches world file 0.055^3 cubes)
-_BLOCK_HALF_H = 0.0275
-
-
-def _handoff_R(base_y):
-    """
-    Handoff orientation: gripper rotated parallel to the table so it doesn't
-    block the side-grasping partner. Wrist sits on the holding arm's own y
-    side and TCP +z points back toward that side; fingers close along
-    world +z, gripping the block's top/bottom faces while the partner takes
-    the (free) ±x faces. World +x stays in the gripper plane so the wrist
-    rotation from a top-down lift is a clean ~90° about world x.
-    """
-    sign = 1.0 if base_y >= 0 else -1.0
-    return np.array([[sign,  0.0,    0.0 ],
-                     [0.0,   0.0,  -sign ],
-                     [0.0,   1.0,    0.0 ]], dtype=float)
-
-
-# ---------------------------------------------------------------------------
-# ROS2 node
-# ---------------------------------------------------------------------------
 
 class GripperController():
     def __init__(self, ros_node: Node = None):
