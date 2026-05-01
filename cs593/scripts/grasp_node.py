@@ -512,8 +512,8 @@ class GraspNode(Node):
         # 3. Open gripper — both fingers actively position-tracked, so this can
         #    block on completion. Width capped at 0.04 m (FR3 finger hard limit).
         self.get_logger().info(f'Step 3/{n_steps}  Opening gripper')
-        self._send_gripper(0.035, duration_sec=2.0, blocking=True)
-        self._wait_gripper(0.035, tol=0.003, timeout=3.0)
+        self._send_gripper(0.033, duration_sec=2.0, blocking=True)
+        self._wait_gripper(0.033, tol=0.003, timeout=3.0)
 
         # 4. Straight-line Cartesian descent / inward approach to grasp point.
         self.get_logger().info(f'Step 4/{n_steps}  Moving to grasp')
