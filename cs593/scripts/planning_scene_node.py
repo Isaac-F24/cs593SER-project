@@ -80,10 +80,30 @@ class PlanningSceneBlocks(Node):
         scene = PlanningScene()
         scene.is_diff = True
         scene.world = PlanningSceneWorld()
-        scene.world.collision_objects = [
-            self._make_collision_object(name, pose)
-            for name, pose in self.block_poses.items()
-        ]
+        # scene.world.collision_objects = [
+        #     self._make_collision_object(name, pose)
+        #     for name, pose in self.block_poses.items()
+        # ]
+
+        table_collision_obj = CollisionObject()
+        table_collision_obj.header.frame_id = self.frame
+        table_collision_obj.header.stamp = self.get_clock().now().to_msg()
+        table_collision_obj.id = "table"
+
+        prim = SolidPrimitive()
+        prim.type = SolidPrimitive.BOX
+        prim.dimensions = [3.0, 3.0, 0.05]
+
+        tablePose = Pose()
+        tablePose.position.x = 0.0
+        tablePose.position.y = 0.0
+        tablePose.position.z = 0.0
+
+        table_collision_obj.primitives = [prim]
+        table_collision_obj.primitive_poses = [tablePose]
+        table_collision_obj.operation = CollisionObject.ADD
+
+        scene.world.collision_objects = [table_collision_obj]
 
         for pub in self._scene_pubs:
             pub.publish(scene)
