@@ -26,6 +26,7 @@ install(
 install(PROGRAMS
         scripts/moveit_controllers.py
         scripts/grasp_node.py
+        scripts/planning_scene_node.py
         DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

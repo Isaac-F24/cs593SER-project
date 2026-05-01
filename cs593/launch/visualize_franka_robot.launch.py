@@ -172,6 +172,16 @@ def generate_launch_description():
         output='screen',
     )
 
+    # Mirror Gazebo block poses into MoveIt's planning scene as collision
+    # objects so move_group plans around the cubes.
+    planning_scene_node = Node(
+        package='cs593',
+        executable='planning_scene_node.py',
+        name='planning_scene_blocks',
+        parameters=[{'use_sim_time': True}],
+        output='screen',
+    )
+
     # Controller config files
     grasp_cfg_dir = os.path.join(
         get_package_share_directory('cs593'), 'config', 'grasp')
@@ -374,6 +384,7 @@ def generate_launch_description():
 
         gazebo_launch,
         gz_bridge_node,
+        planning_scene_node,
         rviz_node,
 
         left_robot_state_publisher,
