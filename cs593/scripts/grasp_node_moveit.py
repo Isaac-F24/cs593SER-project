@@ -22,15 +22,45 @@ from geometry_msgs.msg import Point
 from std_msgs.msg import ColorRGBA
 import builtin_interfaces.msg
 from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
+from tf2_ros import TransformException
+from tf2_ros.buffer import Buffer
+from tf2_ros.transform_listener import TransformListener
 
 from moveit_controllers import LeftArmMoveitController, RightArmMoveitController
 from gripper_control import GripperController
 
 
+# ---------------------------------------------------------------------------
+# FR3 kinematics
+# ---------------------------------------------------------------------------
+_JOINT_ORIGINS = [
+    (0,       0,      0.333,  0,           0, 0),
+    (0,       0,      0,     -np.pi/2,     0, 0),
+    (0,      -0.316,  0,      np.pi/2,     0, 0),
+    (0.0825,  0,      0,      np.pi/2,     0, 0),
+    (-0.0825, 0.384,  0,     -np.pi/2,     0, 0),
+    (0,       0,      0,      np.pi/2,     0, 0),
+    (0.088,   0,      0,      np.pi/2,     0, 0),
+]
+_FLANGE = (0, 0, 0.107, 0, 0, 0)
+_EE_ROT = (0, 0, 0, 0, 0, -np.pi / 4)
+_TCP    = (0, 0, 0.1034, 0, 0, 0)
+
+_JOINT_LIMITS = np.array([
+    (-2.9007,  2.9007),
+    (-1.8361,  1.8361),
+    (-2.9007,  2.9007),
+    (-3.0770, -0.1169),
+    (-2.8763,  2.8763),
+    ( 0.4398,  4.6216),
+    (-3.0508,  3.0508),
+])
+
+# Safe home configuration
+_HOME_Q = np.array([0, -np.pi/4, 0, -3*np.pi/4, 0, np.pi/2, np.pi/4])
+
 # Top-down: TCP z-axis points straight into world -z (gripper faces down)
-R_TOP_DOWN = np.array([[1, 0, 0], 
-                       [0, -1, 0], 
-                       [0, 0, -1]], dtype=float)
+R_TOP_DOWN = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]], dtype=float)
 
 # Side grasp from -y side: TCP +z = world +y (gripper aims at block from -y),
 # TCP +y = world +x (fingers close along world x → grip the block's x-sides),
@@ -42,6 +72,76 @@ R_SIDE_FROM_NEG_Y = np.array([[0, 1, 0],
 
 # Block half-extent (matches world file 0.055^3 cubes)
 _BLOCK_HALF_H = 0.0275
+
+
+def _handoff_R(base_y):
+    """
+    Handoff orientation: gripper rotated parallel to the table so it doesn't
+    block the side-grasping partner. Wrist sits on the holding arm's own y
+    side and TCP +z points back toward that side; fingers close along
+    world +z, gripping the block's top/bottom faces while the partner takes
+    the (free) ±x faces. World +x stays in the gripper plane so the wrist
+    rotation from a top-down lift is a clean ~90° about world x.
+    """
+    sign = 1.0 if base_y >= 0 else -1.0
+    return np.array([[sign,  0.0,    0.0 ],
+                     [0.0,   0.0,  -sign ],
+                     [0.0,   1.0,    0.0 ]], dtype=float)
+
+
+def _rpy_matrix(roll, pitch, yaw):
+    cr, cp, cy = np.cos(roll), np.cos(pitch), np.cos(yaw)
+    sr, sp, sy = np.sin(roll), np.sin(pitch), np.sin(yaw)
+    Rx = np.array([[1, 0, 0], [0, cr, -sr], [0, sr, cr]])
+    Ry = np.array([[cp, 0, sp], [0, 1, 0], [-sp, 0, cp]])
+    Rz = np.array([[cy, -sy, 0], [sy, cy, 0], [0, 0, 1]])
+    return Rz @ Ry @ Rx
+
+
+def _tf(x, y, z, roll, pitch, yaw):
+    T = np.eye(4)
+    T[:3, 3] = [x, y, z]
+    T[:3, :3] = _rpy_matrix(roll, pitch, yaw)
+    return T
+
+
+def fk(q, base_xyz):
+    T = _tf(*base_xyz, 0, 0, 0)
+    for i, origin in enumerate(_JOINT_ORIGINS):
+        T = T @ _tf(*origin) @ _tf(0, 0, 0, 0, 0, q[i])
+    T = T @ _tf(*_FLANGE) @ _tf(*_EE_ROT) @ _tf(*_TCP)
+    return T
+
+
+def ik(target_pos, target_R, base_xyz, q_seed=None, attempts=8):
+    """
+    Numerical IK via SLSQP with random restarts and early exit.
+    Returns joint angles or None.
+    """
+    target_pos = np.asarray(target_pos)
+
+    def cost(q):
+        T = fk(q, base_xyz)
+        dp = T[:3, 3] - target_pos
+        R_err = T[:3, :3].T @ target_R
+        cos_a = np.clip((np.trace(R_err) - 1) / 2, -1, 1)
+        return float(np.dot(dp, dp) + 0.3 * np.arccos(cos_a) ** 2)
+
+    bounds = list(map(tuple, _JOINT_LIMITS))
+    best_q, best_cost = None, float('inf')
+
+    for i in range(attempts):
+        q0 = (q_seed.copy() if (i == 0 and q_seed is not None)
+              else np.random.uniform(_JOINT_LIMITS[:, 0], _JOINT_LIMITS[:, 1]))
+        res = minimize(cost, q0, method='SLSQP', bounds=bounds,
+                       options={'maxiter': 500, 'ftol': 1e-9})
+        if res.fun < best_cost:
+            best_cost, best_q = res.fun, res.x
+            if best_cost < 1e-5:
+                break  # tight solution found, no need for more restarts
+
+    return best_q if best_cost < 5e-3 else None
+
 
 
 def _handoff_R(base_y):
@@ -106,11 +206,25 @@ class GraspNode(Node):
             f'{arm}_fr3_finger_joint2',
         ]
 
+        self.left_arm_client = ActionClient(
+            self, FollowJointTrajectory,
+            f'/left/left_fr3_arm_controller/follow_joint_trajectory'
+        )
+        self.right_arm_client = ActionClient(
+            self, FollowJointTrajectory,
+            f'/right/right_fr3_arm_controller/follow_joint_trajectory'
+        )
+
         self.block_poses = {}
         self._finger_pos = None
 
         self.create_subscription(TFMessage, '/gz_world_poses', self._on_poses, 10)
         self.create_subscription(JointState, f'/{arm}/joint_states', self._on_joint_states, 10)
+        
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
+        self.create_timer(0.1, self.update_pose)
+        self.hand_pose = None
 
         self._marker_pub = self.create_publisher(MarkerArray, '/grasp_markers', 10)
         self._marker_id  = 0
@@ -146,6 +260,16 @@ class GraspNode(Node):
         except ValueError:
             pass
 
+    def update_pose(self):
+        try:
+            now = rclpy.time.Time()
+            transform = self.tf_buffer.lookup_transform("world", "left_fr3_hand", now)
+        except Exception:
+            return
+
+        self.hand_pose = [transform.transform.translation.x, transform.transform.translation.y, transform.transform.translation.z]
+        
+
     def _publish_markers(self, waypoints: dict):
         colors = {
             'approach': ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.9),
@@ -179,6 +303,90 @@ class GraspNode(Node):
         self._marker_pub.publish(ma)
 
     # ------------------------------------------------------------------
+    def _cartesian_line(self, pos_start, pos_end, q_seed, n_steps=12,
+                        target_R=None):
+        """
+        Solve IK at n_steps+1 equally-spaced points along a straight
+        Cartesian line, each seeded from the previous solution. target_R
+        defaults to self.grasp_R; pass an explicit rotation to plan a
+        line in a different end-effector frame (e.g. the horizontal
+        handoff frame during retreat).
+        Returns list of joint arrays, or None if any step fails.
+        """
+        if target_R is None:
+            target_R = self.grasp_R
+        configs, q = [], q_seed.copy()
+        for i in range(n_steps + 1):
+            alpha = i / n_steps
+            pos = pos_start + alpha * (pos_end - pos_start)
+            q = ik(pos, target_R, self.base_xyz, q_seed=q, attempts=5)
+            if q is None:
+                self.get_logger().error(
+                    f'Cartesian IK failed at step {i}/{n_steps} '
+                    f'(pos={pos.round(3)})')
+                return None
+            configs.append(q.copy())
+        return configs
+
+    def _send_trajectory(self, traj) -> bool:
+        """Send a JointTrajectory goal and block the grasp thread until done."""
+
+        if self.arm == "left":
+            self._arm_client = self.left_arm_client
+        else:
+            self._arm_client = self.right_arm_client
+
+        if not self._arm_client.wait_for_server(timeout_sec=5.0):
+            self.get_logger().error('Arm action server unavailable')
+            return False
+
+        goal = FollowJointTrajectory.Goal()
+        goal.trajectory = traj
+        done, success = threading.Event(), [False]
+
+        def _on_result(fut):
+            code = fut.result().result.error_code
+            if code != 0:
+                self.get_logger().warn(f'Trajectory error_code={code}')
+            success[0] = (code == 0)
+            done.set()
+
+        def _on_goal(fut):
+            handle = fut.result()
+            if not handle.accepted:
+                self.get_logger().error('Trajectory goal rejected')
+                done.set()
+                return
+            handle.get_result_async().add_done_callback(_on_result)
+
+        self._arm_client.send_goal_async(goal).add_done_callback(_on_goal)
+        done.wait()
+        return success[0]
+
+    def _build_trajectory(self, configs, total_sec):
+        """
+        Pack joint configs into a timestamped JointTrajectory.
+        Only the first and last points are pinned to zero velocity; intermediates
+        are left unspecified so JTC's cubic spline carries momentum smoothly
+        through them instead of decelerating to a halt at every waypoint.
+        """
+        traj = JointTrajectory()
+        traj.joint_names = self.arm_joints
+        n = len(configs)
+        for i, q in enumerate(configs):
+            pt = JointTrajectoryPoint()
+            pt.positions = [float(v) for v in q]
+            if i == 0 or i == n - 1:
+                pt.velocities = [0.0] * 7
+            t = total_sec * i / max(n - 1, 1)
+            pt.time_from_start = builtin_interfaces.msg.Duration(
+                sec=int(t), nanosec=int((t % 1) * 1e9))
+            traj.points.append(pt)
+        return traj
+
+
+    # --------------------------------------------
+
     def _try_grasp(self):
         if self._done:
             return
@@ -209,6 +417,13 @@ class GraspNode(Node):
             # the block clears its neighbours without colliding the gripper
             # against a top-grasping arm working the same block.
             approach_dy = -0.20 if self.base_xyz[1] < ty else 0.20
+
+            # adjust 
+            if self.arm == "left":
+                ty += _BLOCK_HALF_H + 0.065
+            else:
+                ty -= _BLOCK_HALF_H + 0.065
+
             grasp_pos    = np.array([tx, ty, bz])
             approach_pos = np.array([tx, ty + approach_dy, bz])
             lift_pos     = np.array([tx, ty + 0.25 * approach_dy, bz + 0.08])
@@ -217,7 +432,7 @@ class GraspNode(Node):
             # Cubes are short enough that the original "8 cm below the top"
             # rule would put the TCP under the table — centre is the right
             # target now.
-            grasp_z    = bz                          # TCP at block centre
+            grasp_z    = bz + _BLOCK_HALF_H + 0.065                         # TCP at block centre
             approach_z = bz + _BLOCK_HALF_H + 0.20   # 20 cm above block top
             lift_z     = approach_z
             approach_pos = np.array([tx, ty, approach_z])
@@ -266,14 +481,14 @@ class GraspNode(Node):
 
         # 4. Straight-line Cartesian descent / inward approach to grasp point.
         self.get_logger().info(f'Step 4/{n_steps}  Moving to grasp')
-
+        
         if self.arm == "left":
             self.left_arm_controller.go_to_pose(grasp_pos, rotation_matrix_to_quaternion(self.grasp_R))
         else:
             self.right_arm_controller.go_to_pose(grasp_pos, rotation_matrix_to_quaternion(self.grasp_R))
 
-
         time.sleep(0.5)  # let oscillations settle
+
 
         # 5. Close gripper on the block — blocking so the lift doesn't start
         #    until the fingers have actually moved into contact.
