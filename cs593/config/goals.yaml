@@ -4,50 +4,17 @@ objects:
   - red_box
 
 locations:
-  # Starting positions — all on the left arm's side
-  start_blue:
-    reachable_by_left: true
-    reachable_by_right: false
-    x_range: [0.2, 0.5]
-    y_range: [0.3, 0.6]
-
   start_red:
     reachable_by_left: true
     reachable_by_right: false
     x_range: [0.55, 0.65]
     y_range: [0.25, 0.35]
 
-  start_green:
-    reachable_by_left: true
-    reachable_by_right: false
-    x_range: [0.2, 0.5]
-    y_range: [-0.1, 0.2]
-
-  # Goal positions — all on the right arm's side
-  goal_blue:
-    reachable_by_left: false
-    reachable_by_right: true
-    x_range: [0.2, 0.5]
-    y_range: [-0.6, -0.3]
-
   goal_red:
     reachable_by_left: false
     reachable_by_right: true
     x_range: [0.2, 0.5]
     y_range: [-0.4, -0.1]
-
-  goal_green:
-    reachable_by_left: false
-    reachable_by_right: true
-    x_range: [0.2, 0.5]
-    y_range: [-0.2, 0.1]
-
-  # Handoff zone — reachable by both arms
-  handoff:
-    reachable_by_left: true
-    reachable_by_right: true
-    x_range: [0.4, 0.6]
-    y_range: [-0.1, 0.1]
 
 goals:
   red_box: goal_red
