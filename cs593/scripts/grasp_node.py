@@ -149,9 +149,9 @@ class GraspNode(Node):
         self.declare_parameter('grasp_mode', 'top')  # 'top' or 'side'
         # Handoff pose (top-grasp only): TCP target to move to after the lift,
         # placing the block where a side-grasping partner can reach it.
-        self.declare_parameter('handoff_x', 0.45)
+        self.declare_parameter('handoff_x', 0.32)
         self.declare_parameter('handoff_y', 0.0)
-        self.declare_parameter('handoff_z', 0.30)
+        self.declare_parameter('handoff_z', 0.45)
 
         arm = self.get_parameter('arm').get_parameter_value().string_value
         self.target_block = self.get_parameter('target_block').get_parameter_value().string_value
@@ -247,7 +247,8 @@ class GraspNode(Node):
         colors = {
             'approach': ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.9),
             'grasp':    ColorRGBA(r=1.0, g=0.2, b=0.0, a=0.9),
-            'lift':     ColorRGBA(r=0.0, g=0.4, b=1.0, a=0.9),
+            'handoff':  ColorRGBA(r=0.0, g=0.4, b=1.0, a=0.9),
+            'end':      ColorRGBA(r=0.7, g=0.0, b=1.0, a=0.9),
         }
         ma = MarkerArray()
         for name, pos in waypoints.items():
@@ -429,31 +430,31 @@ class GraspNode(Node):
 
         # Grasp geometry
         if self.grasp_mode == 'side':
-            # Side grasp: TCP at block centre height; approach from the arm-base
-            # side along world y by 20 cm; lift = retract 5 cm + raise 8 cm so
-            # the block clears its neighbours without colliding the gripper
-            # against a top-grasping arm working the same block.
+            # Side grasp
             approach_dy = -0.20 if self.base_xyz[1] < ty else 0.20
             grasp_pos    = np.array([tx, ty, bz])
             approach_pos = np.array([tx, ty + approach_dy, bz])
-            lift_pos     = np.array([tx, ty + 0.25 * approach_dy, bz + 0.08])
+            end_pos      = np.array([tx, ty + approach_dy, bz])
         else:
-            # Top-down: approach above, grip at block centre, lift back up.
-            # Cubes are short enough that the original "8 cm below the top"
-            # rule would put the TCP under the table — centre is the right
-            # target now.
+            # Top-down
             grasp_z    = bz                          # TCP at block centre
             approach_z = bz + _BLOCK_HALF_H + 0.20   # 20 cm above block top
-            lift_z     = approach_z
             approach_pos = np.array([tx, ty, approach_z])
             grasp_pos    = np.array([tx, ty, grasp_z])
-            lift_pos     = np.array([tx, ty, lift_z])
+            lift_pos     = approach_pos
 
-        self._publish_markers({
-            'approach': approach_pos,
-            'grasp':    grasp_pos,
-            'lift':     lift_pos,
-        })
+        if self.grasp_mode == 'top':
+            self._publish_markers({
+                'approach': approach_pos,
+                'grasp':    grasp_pos,
+                'handoff':  self.handoff_xyz,
+            })
+        else:
+            self._publish_markers({
+                'approach': approach_pos,
+                'grasp':    grasp_pos,
+                'end':      end_pos,
+            })
 
         # --- Solve IK for approach (generous attempts, free path afterwards) ---
         self.get_logger().info('Solving approach IK ...')
@@ -474,9 +475,13 @@ class GraspNode(Node):
         if descent is None:
             return
 
-        # --- Plan ascent: straight Cartesian line, grasp → lift ---
+        # --- Plan ascent: straight Cartesian line, grasp → after-grasp pose ---
+        # In top mode this is a vertical lift back to the approach height. In
+        # side mode it's a retreat back along the approach corridor + raise,
+        # carrying the block clear of the holding arm at the handoff pose.
+        ascent_end = lift_pos if self.grasp_mode == 'top' else end_pos
         self.get_logger().info('Planning straight ascent ...')
-        ascent = self._cartesian_line(grasp_pos, lift_pos, descent[-1], n_steps=14)
+        ascent = self._cartesian_line(grasp_pos, ascent_end, descent[-1], n_steps=14)
         if ascent is None:
             return
 
