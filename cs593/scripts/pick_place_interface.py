@@ -447,6 +447,8 @@ class PickPlaceInterfaceNode(Node):
 
         self.gripper_controller.open_gripper(left=(True if to_arm == "left" else False))
 
+        time.sleep(0.5)
+
         # 4
         self.get_logger().info(f'Step 4  Moving to grasp')
         
@@ -460,15 +462,14 @@ class PickPlaceInterfaceNode(Node):
         if to_arm == "left":
             ty += _BLOCK_HALF_H + 0.065
         else:
-            ty -= _BLOCK_HALF_H + 0.03
+            ty -= _BLOCK_HALF_H + 0.065
 
         grasp_pos = np.array([tx, ty, bz])
 
-        print(approach_pos)
         print(grasp_pos)
-        print(self.handoff_xyz)
+        print(R_SIDE_FROM_NEG_Y)
 
-        if self.arm == "left":
+        if to_arm == "left":
             self.left_arm_controller.go_to_pose(grasp_pos, rotation_matrix_to_quaternion(R_SIDE_FROM_NEG_Y), cartesian=True)
         else:
             self.right_arm_controller.go_to_pose(grasp_pos, rotation_matrix_to_quaternion(R_SIDE_FROM_NEG_Y), cartesian=True)

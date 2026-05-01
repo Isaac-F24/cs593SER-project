@@ -481,6 +481,9 @@ class GraspNode(Node):
 
         # 4. Straight-line Cartesian descent / inward approach to grasp point.
         self.get_logger().info(f'Step 4/{n_steps}  Moving to grasp')
+
+        print(grasp_pos)
+        print(self.grasp_R)
         
         if self.arm == "left":
             self.left_arm_controller.go_to_pose(grasp_pos, rotation_matrix_to_quaternion(self.grasp_R), cartesian=True)
