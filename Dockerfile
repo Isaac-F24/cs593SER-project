@@ -89,7 +89,8 @@ RUN sudo chown -R $USERNAME:$USERNAME /ros2_ws \
     && rm -rf src \
     && mkdir -p src
 
-RUN pip install unified_planning
+RUN pip install --upgrade scipy
+RUN pip install unified_planning[engines]
 
 COPY ./franka_entrypoint.sh /franka_entrypoint.sh
 RUN sudo chmod +x /franka_entrypoint.sh
