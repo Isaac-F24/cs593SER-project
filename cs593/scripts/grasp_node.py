@@ -507,8 +507,8 @@ class GraspNode(Node):
         # 3. Open gripper — both fingers actively position-tracked, so this can
         #    block on completion. Width capped at 0.04 m (FR3 finger hard limit).
         self.get_logger().info(f'Step 3/{n_steps}  Opening gripper')
-        self._send_gripper(0.04, duration_sec=2.0, blocking=True)
-        self._wait_gripper(0.04, tol=0.003, timeout=3.0)
+        self._send_gripper(0.033, duration_sec=2.0, blocking=True)
+        self._wait_gripper(0.033, tol=0.003, timeout=3.0)
 
         # 4. Straight-line Cartesian descent / inward approach to grasp point.
         self.get_logger().info(f'Step 4/{n_steps}  Moving to grasp')
@@ -519,8 +519,8 @@ class GraspNode(Node):
         # 5. Close gripper on the block — blocking so the lift doesn't start
         #    until the fingers have actually moved into contact.
         self.get_logger().info(f'Step 5/{n_steps}  Closing gripper')
-        self._send_gripper(0.0, duration_sec=2.5, blocking=True)
-        self._wait_gripper(0.0, tol=0.003, timeout=3.0)
+        self._send_gripper(0.005, duration_sec=2.5, blocking=True)
+        self._wait_gripper(0.005, tol=0.003, timeout=3.0)
 
         # 6. (side-grasp only) Release the partner arm so the handoff completes
         #    before this arm lifts. Done before the lift so the partner isn't
@@ -530,7 +530,7 @@ class GraspNode(Node):
                 f'Step 6/{n_steps}  Releasing {self.other_arm} gripper (handoff)')
             time.sleep(0.3)  # let this arm's grip settle on the block
             self._send_gripper(
-                0.04, duration_sec=2.0, blocking=True,
+                0.033, duration_sec=2.0, blocking=True,
                 client=self._other_gripper_client,
                 joint_names=self.other_gripper_joints)
 
