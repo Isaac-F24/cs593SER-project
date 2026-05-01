@@ -19,7 +19,7 @@ def generateJointNames(prefix: str = "") -> list[str]:
     ]
 
 class LeftArmMoveitController():
-    def __init__(self):
+    def __init__(self, executor: SingleThreadedExecutor):
         self.node = Node("left_arm_moveit_node", namespace="left")
 
         joint_names = generateJointNames("left_")
@@ -32,10 +32,7 @@ class LeftArmMoveitController():
             group_name="left_fr3_arm",
         )
 
-        self.executor = SingleThreadedExecutor()
-        self.executor.add_node(self.node)
-        self.thread = threading.Thread(target=self.executor.spin)
-        self.thread.start()
+        executor.add_node(self.node)
 
     def go_to_pose(self, pose, orientation):
         """
@@ -73,13 +70,10 @@ class LeftArmMoveitController():
         )
 
     def cleanup(self):
-        self.executor.shutdown()
-        if self.thread.is_alive():
-            self.thread.join()
         self.node.destroy_node()
         
 class RightArmMoveitController():
-    def __init__(self):
+    def __init__(self, executor: SingleThreadedExecutor):
         self.node = Node("right_arm_moveit_node", namespace="right")
 
         joint_names = generateJointNames("right_")
@@ -92,10 +86,7 @@ class RightArmMoveitController():
             group_name="right_fr3_arm",
         )
 
-        self.executor = SingleThreadedExecutor()
-        self.executor.add_node(self.node)
-        self.thread = threading.Thread(target=self.executor.spin)
-        self.thread.start()
+        executor.add_node(self.node)
 
     def go_to_pose(self, pose, orientation):
         """
@@ -133,9 +124,6 @@ class RightArmMoveitController():
         )
 
     def cleanup(self):
-        self.executor.shutdown()
-        if self.thread.is_alive():
-            self.thread.join()
         self.node.destroy_node()
 
 
@@ -144,9 +132,14 @@ if __name__ == "__main__":
     
     rclpy.init()
 
-    leftArmController = LeftArmMoveitController()
+    executor = SingleThreadedExecutor()
 
-    rightArmController = RightArmMoveitController()
+    leftArmController = LeftArmMoveitController(executor)
+
+    rightArmController = RightArmMoveitController(executor)
+
+    thread = threading.Thread(target=executor.spin())
+    thread.start()
 
     success = leftArmController.go_to_pose([0.3,0.5,0.5],[0.5,0.5,0,0])
     if (not success):
