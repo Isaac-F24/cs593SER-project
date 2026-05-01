@@ -10,20 +10,23 @@ import yaml
 import rclpy
 from rclpy.node import Node
 from tf2_msgs.msg import TFMessage
+from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
 
 from unified_planning.shortcuts import *
 from unified_planning.engines import PlanGenerationResultStatus
 from unified_planning.environment import get_environment
+
+from pick_place_interface import PickPlaceInterfaceNode
 
 
 KNOWN_OBJECTS = ['blue_box', 'red_box', 'green_box']
 
 
 class TaskPlannerNode(Node):
-    def __init__(self):
+    def __init__(self, executor):
         super().__init__('task_planner_node')
 
-        self.declare_parameter('goal_spec', './goals.yaml')
+        self.declare_parameter('goal_spec', '/ros2_ws/src/cs593/config/goals.yaml')
 
         self._pose_lock    = threading.Lock()
         self._block_poses: dict[str, tuple] = {}
@@ -41,6 +44,10 @@ class TaskPlannerNode(Node):
 
         self.create_timer(2.0, self._try_start)
         self.get_logger().info('Task planner ready, waiting for poses...')
+
+        executor.add_node(self)
+
+        self.pick_place_interface = PickPlaceInterfaceNode(executor)
 
     def _on_poses(self, msg: TFMessage):
         with self._pose_lock:
@@ -172,19 +179,26 @@ class TaskPlannerNode(Node):
         if name == 'pick':
             arm, obj, loc = args
             self.get_logger().info(f'PICK  arm={arm}  obj={obj}  loc={loc}')
-            # TODO: call grasp action server
+
+            self.pick_place_interface.pick(str(arm), str(obj))
+
             return True
 
         elif name == 'place':
             arm, obj, loc = args
             self.get_logger().info(f'PLACE  arm={arm}  obj={obj}  loc={loc}')
-            # TODO: call grasp action server
+
+            self.pick_place_interface.place(str(arm), str(obj), self._location_specs[str(loc)])
+
             return True
 
         elif name == 'exchange':
             a1, a2, obj = args
             self.get_logger().info(f'HANDOFF  from={a1}  to={a2}  obj={obj}')
-            # TODO: coordinate both arms via grasp action server
+            
+
+            self.pick_place_interface.handoff(str(a1), str(a2), str(obj))
+
             return True
 
         else:
@@ -290,7 +304,12 @@ class TaskPlannerNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    rclpy.spin(TaskPlannerNode())
+
+    executor = SingleThreadedExecutor()
+    planner_node = TaskPlannerNode(executor)
+    
+    executor.spin()
+
     rclpy.shutdown()
 
 

@@ -50,4 +50,4 @@ locations:
     y_range: [-0.1, 0.1]
 
 goals:
-  red_box:   goal_red
+  red_box: goal_red
