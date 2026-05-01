@@ -28,6 +28,7 @@ install(PROGRAMS
         scripts/grasp_node.py
         scripts/grasp_node_moveit.py
         scripts/planning_scene_node.py
+        scripts/task_planner.py
         DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
