@@ -19,6 +19,7 @@ RUN apt-get update && \
         gdb \
         git \
         nano \
+        pip \
         openssh-client \
         python3-colcon-argcomplete \
         python3-colcon-common-extensions \
@@ -87,6 +88,8 @@ RUN sudo chown -R $USERNAME:$USERNAME /ros2_ws \
     && rm -rf /home/$USERNAME/.ros \
     && rm -rf src \
     && mkdir -p src
+
+RUN pip install unified_planning
 
 COPY ./franka_entrypoint.sh /franka_entrypoint.sh
 RUN sudo chmod +x /franka_entrypoint.sh
