@@ -70,6 +70,14 @@ R_SIDE_FROM_NEG_Y = np.array([[0, 1, 0],
                               [0, 0, 1],
                               [1, 0, 0]], dtype=float)
 
+# Side grasp from +y side: mirror of R_SIDE_FROM_NEG_Y for the left arm
+# (base at y=+0.5). TCP +z = world -y (gripper aims at block from +y),
+# TCP +y = world +x (fingers close along world x),
+# TCP +x = world -z (right-hand frame).
+R_SIDE_FROM_POS_Y = np.array([[ 0,  1,  0],
+                               [ 0,  0, -1],
+                               [-1,  0,  0]], dtype=float)
+
 # Block half-extent (matches world file 0.055^3 cubes)
 _BLOCK_HALF_H = 0.0275
 
@@ -434,7 +442,7 @@ class PickPlaceInterfaceNode(Node):
         self.get_logger().info('Step 1 Moving to approach position')
 
         if to_arm == "left":
-            self.left_arm_controller.go_to_pose(approach_pos, rotation_matrix_to_quaternion(R_SIDE_FROM_NEG_Y))
+            self.left_arm_controller.go_to_pose(approach_pos, rotation_matrix_to_quaternion(R_SIDE_FROM_POS_Y))
         else:
             self.right_arm_controller.go_to_pose(approach_pos, rotation_matrix_to_quaternion(R_SIDE_FROM_NEG_Y))
 
@@ -470,7 +478,7 @@ class PickPlaceInterfaceNode(Node):
         print(R_SIDE_FROM_NEG_Y)
 
         if to_arm == "left":
-            self.left_arm_controller.go_to_pose(grasp_pos, rotation_matrix_to_quaternion(R_SIDE_FROM_NEG_Y), cartesian=True)
+            self.left_arm_controller.go_to_pose(grasp_pos, rotation_matrix_to_quaternion(R_SIDE_FROM_POS_Y), cartesian=True)
         else:
             self.right_arm_controller.go_to_pose(grasp_pos, rotation_matrix_to_quaternion(R_SIDE_FROM_NEG_Y), cartesian=True)
 
@@ -504,9 +512,9 @@ class PickPlaceInterfaceNode(Node):
 
         self.get_logger().info('Handoff sequence complete')
 
-    def pick(self, arm: str, target_block):
+    def pick(self, arm: str, target_block) -> bool:
         """
-        Arm = "left" or "right"
+        Arm = "left" or "right". Returns True if the block was successfully lifted.
         """
 
         while target_block not in self.block_poses:
@@ -516,6 +524,7 @@ class PickPlaceInterfaceNode(Node):
 
 
         bx, by, bz = self.block_poses[target_block]
+        initial_bz = bz
         self.get_logger().info(
             f'Block {target_block} at ({bx:.3f}, {by:.3f}, {bz:.3f})')
         
@@ -577,12 +586,33 @@ class PickPlaceInterfaceNode(Node):
         # 6
         self.get_logger().info(f'Step 6 Lifting')
 
-        if self.arm == "left":
+        # Allow finger state to settle, then check if the gripper actually caught
+        # the block (fingers should be held open by the block).  If fingers closed
+        # fully (< 0.015 m) the grasp failed; open before ascending so the closed
+        # fingers don't drag or topple the block on the way up.
+        time.sleep(0.3)
+        if self._finger_pos is not None and self._finger_pos < 0.015:
+            self.get_logger().info(
+                'Grip appears to have failed — opening gripper before ascent')
+            self.gripper_controller.open_gripper(
+                left=(True if arm == "left" else False))
+
+        if arm == "left":
             self.left_arm_controller.go_to_pose(lift_pos, rotation_matrix_to_quaternion(R_TOP_DOWN), cartesian=True)
         else:
             self.right_arm_controller.go_to_pose(lift_pos, rotation_matrix_to_quaternion(R_TOP_DOWN), cartesian=True)
 
-        self.get_logger().info('Pick sequence complete')
+        time.sleep(0.5)  # wait for Gazebo poses to update
+
+        new_bz = self.block_poses.get(target_block, (0, 0, initial_bz))[2]
+        success = new_bz > initial_bz + 0.05
+        if success:
+            self.get_logger().info('Pick sequence complete')
+        else:
+            self.get_logger().warn(
+                f'Pick failed: {target_block} did not rise '
+                f'(z={new_bz:.3f}, was {initial_bz:.3f})')
+        return success
 
     def place(self, arm: str, target_block, location: dict):
         """
@@ -617,7 +647,19 @@ class PickPlaceInterfaceNode(Node):
         # 2
         self.get_logger().info(f'Step 2 Opening gripper')
 
-        self.gripper_controller.open_gripper(left=(True if arm == "left" else False))  
+        self.gripper_controller.open_gripper(left=(True if arm == "left" else False))
+
+        time.sleep(0.3)  # let block settle before retreating
+
+        # 3 — ascend straight up so the gripper clears the placed block
+        ascent_pos = [target_x, target_y, target_z + 0.20]
+        self.get_logger().info('Step 3 Ascending after place')
+        if arm == "left":
+            self.left_arm_controller.go_to_pose(
+                ascent_pos, rotation_matrix_to_quaternion(R_TOP_DOWN), cartesian=True)
+        else:
+            self.right_arm_controller.go_to_pose(
+                ascent_pos, rotation_matrix_to_quaternion(R_TOP_DOWN), cartesian=True)
 
         self.get_logger().info('Place sequence complete')
       

@@ -137,7 +137,8 @@ class TaskPlannerNode(Node):
 
                 # Cross-check planner state against Gazebo
                 if not self._verify_state(state, simulator):
-                    break
+                    self.get_logger().error('State verification failed — aborting plan')
+                    return
 
         self.get_logger().info('Plan execution complete')
 
@@ -180,9 +181,13 @@ class TaskPlannerNode(Node):
             arm, obj, loc = args
             self.get_logger().info(f'PICK  arm={arm}  obj={obj}  loc={loc}')
 
-            self.pick_place_interface.pick(str(arm), str(obj))
-
-            return True
+            for attempt in range(1, 4):
+                if self.pick_place_interface.pick(str(arm), str(obj)):
+                    return True
+                self.get_logger().warn(
+                    f'Pick attempt {attempt}/3 failed for {obj}, '
+                    + ('retrying...' if attempt < 3 else 'giving up'))
+            return False
 
         elif name == 'place':
             arm, obj, loc = args

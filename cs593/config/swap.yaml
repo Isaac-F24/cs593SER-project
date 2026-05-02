@@ -6,7 +6,7 @@ locations:
   start_blue:
     reachable_by_left: true
     reachable_by_right: false
-    x_range: [0.2, 0.5]
+    x_range: [0.2, 0.6]
     y_range: [0.05, 0.15]
 
   start_red:
