@@ -1,3 +1,17 @@
+# CS593
+### Isaac Fuksman, Srihith Gangireddygari, Dhruv Chanana
+
+## Instructions
+We ran our project using docker compose. To run our project, run 
+
+```ros2 launch cs593 visualize_franka_robot.launch.py```
+
+Run the task planner with 
+
+```ros2 run cs593 task_planner.py --ros-args -p goal_spec:=<filename>```
+
+Below is the original readme for franka_ros2.
+
 # ROS 2 Integration for Franka Robotics Research Robots
 
 [![CI](https://github.com/frankarobotics/franka_ros2/actions/workflows/ci.yml/badge.svg)](https://github.com/frankarobotics/franka_ros2/actions/workflows/ci.yml)
